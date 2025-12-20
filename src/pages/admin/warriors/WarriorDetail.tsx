@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format, parseISO, isValid, parse } from "date-fns";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,9 @@ interface Warrior {
     rank: string;
     unit: string;
     status: string;
-    joinDate?: string;
+    birthDate?: string;
+    gender?: string;
+    address?: string;
     createdAt?: string;
 }
 
@@ -21,6 +24,26 @@ const WarriorDetail = () => {
     const navigate = useNavigate();
     const [warrior, setWarrior] = useState<Warrior | null>(null);
     const [loading, setLoading] = useState(true);
+
+    const formatDate = (dateString?: string) => {
+        if (!dateString) return "Chưa cập nhật";
+        try {
+            // Try ISO first
+            let date = parseISO(dateString);
+            if (!isValid(date)) {
+                // Try dd/MM/yyyy
+                date = parse(dateString, "dd/MM/yyyy", new Date());
+            }
+            if (!isValid(date)) {
+                const fallbackDate = new Date(dateString);
+                if (!isValid(fallbackDate)) return dateString;
+                return format(fallbackDate, "dd/MM/yyyy");
+            }
+            return format(date, "dd/MM/yyyy");
+        } catch (e) {
+            return dateString;
+        }
+    };
 
     useEffect(() => {
         const fetchWarrior = async () => {
@@ -108,10 +131,42 @@ const WarriorDetail = () => {
                                     <p className="text-lg">{warrior.unit}</p>
                                 </div>
                             </div>
+
+                            <div className="flex items-start space-x-3">
+                                <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-sm text-muted-foreground">Giới tính</p>
+                                    <p className="text-lg">{warrior.gender || "Chưa cập nhật"}</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="space-y-4">
-                            {/* Join date removed as per request */}
+                            <div className="flex items-start space-x-3">
+                                <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-sm text-muted-foreground">Ngày sinh</p>
+                                    <p className="text-lg">{formatDate(warrior.birthDate)}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-start space-x-3">
+                                <Briefcase className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-sm text-muted-foreground">Địa chỉ</p>
+                                    <p className="text-lg">{warrior.address || "Chưa cập nhật"}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-start space-x-3">
+                                <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                                <div>
+                                    <p className="font-medium text-sm text-muted-foreground">Ngày tạo hồ sơ</p>
+                                    <p className="text-lg">{formatDate(warrior.createdAt)}</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

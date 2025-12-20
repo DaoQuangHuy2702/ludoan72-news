@@ -21,19 +21,23 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { format, parse } from "date-fns";
 import api from "@/lib/api";
 
 const formSchema = z.object({
     name: z.string().min(2, {
-        message: "Tên phải có ít nhất 2 ký tự.",
+        message: "Họ và tên phải có ít nhất 2 ký tự.",
     }),
     rank: z.string().min(1, {
         message: "Vui lòng chọn cấp bậc.",
     }),
     unit: z.string().min(1, {
-        message: "Đơn vị không được để trống.",
+        message: "Vui lòng nhập đơn vị.",
     }),
     status: z.enum(["active", "inactive"]),
+    birthDate: z.string().optional(),
+    gender: z.string().optional(),
+    address: z.string().optional(),
 });
 
 const WarriorForm = () => {
@@ -48,6 +52,9 @@ const WarriorForm = () => {
             rank: "",
             unit: "",
             status: "active",
+            birthDate: "",
+            gender: "Nam",
+            address: "",
         },
     });
 
@@ -57,12 +64,29 @@ const WarriorForm = () => {
                 try {
                     const response = await api.get(`/cms/warriors/${id}`);
                     if (response.data && response.data.data) {
-                        const warrior = response.data.data;
+                        const warriorData = response.data.data;
+                        // Convert dd/MM/yyyy to yyyy-MM-dd for native input
+                        let displayDate = "";
+                        const birthDateStr = warriorData.birthDate || "";
+                        if (birthDateStr && birthDateStr.includes("/")) {
+                            try {
+                                const date = parse(birthDateStr, "dd/MM/yyyy", new Date());
+                                displayDate = format(date, "yyyy-MM-dd");
+                            } catch (e) {
+                                console.error("Date conversion failed in load:", e);
+                            }
+                        } else if (birthDateStr) {
+                            displayDate = birthDateStr;
+                        }
+
                         form.reset({
-                            name: warrior.name,
-                            rank: warrior.rank,
-                            unit: warrior.unit,
-                            status: warrior.status,
+                            name: warriorData.name,
+                            rank: warriorData.rank,
+                            unit: warriorData.unit,
+                            status: warriorData.status,
+                            birthDate: displayDate,
+                            gender: warriorData.gender || "Nam",
+                            address: warriorData.address || "",
                         });
                     }
                 } catch (error) {
@@ -77,22 +101,34 @@ const WarriorForm = () => {
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
+            // Convert yyyy-MM-dd to dd/MM/yyyy for backend
+            const submitValues = { ...values };
+            if (values.birthDate) {
+                try {
+                    const date = parse(values.birthDate, "yyyy-MM-dd", new Date());
+                    submitValues.birthDate = format(date, "dd/MM/yyyy");
+                } catch (e) {
+                    console.error("Date conversion failed in submit:", e);
+                }
+            }
+
             if (isEditMode && id) {
-                await api.put(`/cms/warriors/${id}`, values);
-                toast.success("Cập nhật thành công!");
+                const response = await api.put(`/cms/warriors/${id}`, submitValues);
+                toast.success(response.data.message || "Cập nhật thành công!");
             } else {
-                await api.post("/cms/warriors", values);
-                toast.success("Thêm mới thành công!");
+                const response = await api.post("/cms/warriors", submitValues);
+                toast.success(response.data.message || "Thêm mới thành công!");
             }
             navigate("/admin/warriors");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Submit failed:", error);
-            toast.error("Có lỗi xảy ra, vui lòng thử lại");
+            const errorMessage = error.response?.data?.message || "Có lỗi xảy ra, vui lòng thử lại";
+            toast.error(errorMessage);
         }
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-3xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">
                     {isEditMode ? "Chỉnh sửa thông tin" : "Thêm chiến sĩ mới"}
@@ -103,19 +139,86 @@ const WarriorForm = () => {
             <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Họ và tên</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Nguyễn Văn A" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Họ và tên <span className="text-red-500">*</span></FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Nguyễn Văn A" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="gender"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Giới tính</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Chọn giới tính" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Nam">Nam</SelectItem>
+                                                <SelectItem value="Nữ">Nữ</SelectItem>
+                                                <SelectItem value="Khác">Khác</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField
+                                control={form.control}
+                                name="birthDate"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Ngày sinh</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="date"
+                                                {...field}
+                                                className="bg-background h-10"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Trạng thái</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Chọn trạng thái" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="active">Đang công tác</SelectItem>
+                                                <SelectItem value="inactive">Đã nghỉ/Chuyển</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <FormField
@@ -123,7 +226,7 @@ const WarriorForm = () => {
                                 name="rank"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Cấp bậc</FormLabel>
+                                        <FormLabel>Cấp bậc <span className="text-red-500">*</span></FormLabel>
                                         <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
@@ -152,7 +255,7 @@ const WarriorForm = () => {
                                 name="unit"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Đơn vị</FormLabel>
+                                        <FormLabel>Đơn vị <span className="text-red-500">*</span></FormLabel>
                                         <FormControl>
                                             <Input placeholder="Tiểu đoàn 1" {...field} />
                                         </FormControl>
@@ -162,29 +265,19 @@ const WarriorForm = () => {
                             />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                                control={form.control}
-                                name="status"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Trạng thái</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Chọn trạng thái" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="active">Đang công tác</SelectItem>
-                                                <SelectItem value="inactive">Đã nghỉ/Chuyển</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                        <FormField
+                            control={form.control}
+                            name="address"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Địa chỉ</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Hà Nội, Việt Nam" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
                         <Button type="submit" className="w-full">
                             {isEditMode ? "Lưu thay đổi" : "Thêm mới"}

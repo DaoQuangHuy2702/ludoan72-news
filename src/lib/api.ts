@@ -24,6 +24,17 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
     (response) => {
+        const { data } = response;
+        // Check for business logic status code
+        if (data && data.statusCode && data.statusCode !== 'SUCCESS2000') {
+            return Promise.reject({
+                response: {
+                    data: {
+                        message: data.message || 'Có lỗi xảy ra từ máy chủ'
+                    }
+                }
+            });
+        }
         return response;
     },
     (error) => {

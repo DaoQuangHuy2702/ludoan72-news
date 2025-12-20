@@ -19,14 +19,10 @@ const AdminLogin = () => {
                 password,
             });
 
-            if (response.data.success) {
-                const { token } = response.data.data;
-                localStorage.setItem("admin_token", token);
-                toast.success("Đăng nhập thành công");
-                navigate("/admin");
-            } else {
-                toast.error(response.data.message || "Thông tin đăng nhập không chính xác");
-            }
+            const { token } = response.data.data;
+            localStorage.setItem("admin_token", token);
+            toast.success(response.data.message || "Đăng nhập thành công");
+            navigate("/admin");
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || "Lỗi đăng nhập";
             toast.error(errorMessage);
@@ -38,7 +34,7 @@ const AdminLogin = () => {
         <div className="flex h-screen w-full items-center justify-center bg-gray-100 dark:bg-gray-900">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle className="text-center text-2xl font-bold">Đăng nhập Admin</CardTitle>
+                    <CardTitle className="text-center text-2xl font-bold">Đăng nhập</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleLogin} className="space-y-4">
