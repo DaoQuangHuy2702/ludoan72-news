@@ -21,7 +21,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
+      <Sonner position="top-center" duration={1000} />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -32,7 +32,7 @@ const App = () => (
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<div className="text-2xl font-bold">Welcome to Admin Dashboard</div>} />
+            <Route index element={<div className="text-2xl font-bold">Chào mừng bạn đến với Bảng quản trị</div>} />
             <Route path="warriors" element={<WarriorList />} />
             <Route path="warriors/new" element={<WarriorForm />} />
             <Route path="warriors/:id" element={<WarriorForm />} />

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -22,7 +21,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { mockWarriors } from "@/lib/mock-data";
+import api from "@/lib/api";
 
 const formSchema = z.object({
     name: z.string().min(2, {
@@ -35,7 +34,6 @@ const formSchema = z.object({
         message: "Đơn vị không được để trống.",
     }),
     status: z.enum(["active", "inactive"]),
-    joinDate: z.string(),
 });
 
 const WarriorForm = () => {
@@ -50,26 +48,47 @@ const WarriorForm = () => {
             rank: "",
             unit: "",
             status: "active",
-            joinDate: new Date().toISOString().split("T")[0],
         },
     });
 
     useEffect(() => {
-        if (isEditMode) {
-            const warrior = mockWarriors.find((w) => w.id === id);
-            if (warrior) {
-                form.reset(warrior);
-            } else {
-                toast.error("Warrior not found");
-                navigate("/admin/warriors");
+        const fetchWarrior = async () => {
+            if (isEditMode && id) {
+                try {
+                    const response = await api.get(`/cms/warriors/${id}`);
+                    if (response.data && response.data.data) {
+                        const warrior = response.data.data;
+                        form.reset({
+                            name: warrior.name,
+                            rank: warrior.rank,
+                            unit: warrior.unit,
+                            status: warrior.status,
+                        });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch warrior:", error);
+                    toast.error("Không tìm thấy thông tin chiến sĩ");
+                    navigate("/admin/warriors");
+                }
             }
-        }
+        };
+        fetchWarrior();
     }, [id, isEditMode, form, navigate]);
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
-        console.log(values);
-        toast.success(isEditMode ? "Cập nhật thành công!" : "Thêm mới thành công!");
-        navigate("/admin/warriors");
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        try {
+            if (isEditMode && id) {
+                await api.put(`/cms/warriors/${id}`, values);
+                toast.success("Cập nhật thành công!");
+            } else {
+                await api.post("/cms/warriors", values);
+                toast.success("Thêm mới thành công!");
+            }
+            navigate("/admin/warriors");
+        } catch (error) {
+            console.error("Submit failed:", error);
+            toast.error("Có lỗi xảy ra, vui lòng thử lại");
+        }
     }
 
     return (
@@ -144,20 +163,6 @@ const WarriorForm = () => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField
-                                control={form.control}
-                                name="joinDate"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Ngày nhập ngũ</FormLabel>
-                                        <FormControl>
-                                            <Input type="date" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
                             <FormField
                                 control={form.control}
                                 name="status"

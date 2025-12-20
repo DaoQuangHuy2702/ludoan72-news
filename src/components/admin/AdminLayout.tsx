@@ -1,20 +1,28 @@
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Users, LogOut, LayoutDashboard, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { toast } from "sonner";
 
 const AdminLayout = () => {
     const location = useLocation();
+    const navigate = useNavigate();
 
     const isActive = (path: string) => {
         return location.pathname === path;
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem("admin_token");
+        toast.success("Đã đăng xuất thành công");
+        navigate("/admin/login");
+    };
+
     const SidebarContent = () => (
         <div className="flex flex-col h-full bg-white dark:bg-gray-800">
             <div className="flex h-14 items-center border-b px-6 font-semibold">
-                Admin Config
+                Quản trị hệ thống
             </div>
             <nav className="flex-1 space-y-2 p-4">
                 <Link to="/admin">
@@ -23,7 +31,7 @@ const AdminLayout = () => {
                         className="w-full justify-start"
                     >
                         <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Dashboard
+                        Bảng điều khiển
                     </Button>
                 </Link>
                 <Link to="/admin/warriors">
@@ -32,17 +40,19 @@ const AdminLayout = () => {
                         className="w-full justify-start"
                     >
                         <Users className="mr-2 h-4 w-4" />
-                        Warriors
+                        Chiến sĩ
                     </Button>
                 </Link>
             </nav>
             <div className="border-t p-4">
-                <Link to="/admin/login">
-                    <Button variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50">
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Logout
-                    </Button>
-                </Link>
+                <Button
+                    variant="ghost"
+                    onClick={handleLogout}
+                    className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+                >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Đăng xuất
+                </Button>
             </div>
         </div>
     );
@@ -66,7 +76,7 @@ const AdminLayout = () => {
                         <SidebarContent />
                     </SheetContent>
                 </Sheet>
-                <span className="font-semibold">Admin Panel</span>
+                <span className="font-semibold">Bảng quản trị</span>
             </div>
 
             {/* Main Content */}

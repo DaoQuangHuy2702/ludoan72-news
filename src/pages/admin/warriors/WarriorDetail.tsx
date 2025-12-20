@@ -1,19 +1,62 @@
+import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockWarriors } from "@/lib/mock-data";
-import { ArrowLeft, User, Shield, Briefcase, Calendar } from "lucide-react";
+import { ArrowLeft, User, Shield, Briefcase, Calendar, Loader2 } from "lucide-react";
+import api from "@/lib/api";
+import { toast } from "sonner";
+
+interface Warrior {
+    id: string;
+    name: string;
+    rank: string;
+    unit: string;
+    status: string;
+    joinDate?: string;
+    createdAt?: string;
+}
 
 const WarriorDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const warrior = mockWarriors.find((w) => w.id === id);
+    const [warrior, setWarrior] = useState<Warrior | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchWarrior = async () => {
+            try {
+                const response = await api.get(`/cms/warriors/${id}`);
+                if (response.data && response.data.success) {
+                    setWarrior(response.data.data);
+                } else {
+                    toast.error("Không tìm thấy thông tin chiến sĩ");
+                }
+            } catch (error) {
+                console.error("Failed to fetch warrior:", error);
+                toast.error("Lỗi khi tải thông tin chiến sĩ");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (id) {
+            fetchWarrior();
+        }
+    }, [id]);
+
+    if (loading) {
+        return (
+            <div className="flex h-64 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     if (!warrior) {
         return (
             <div className="flex flex-col items-center justify-center p-12">
-                <h2 className="text-xl font-bold mb-4">Warrior not found</h2>
-                <Button onClick={() => navigate("/admin/warriors")}>Back to List</Button>
+                <h2 className="text-xl font-bold mb-4">Không tìm thấy thông tin chiến sĩ</h2>
+                <Button onClick={() => navigate("/admin/warriors")}>Quay lại danh sách</Button>
             </div>
         );
     }
@@ -37,7 +80,7 @@ const WarriorDetail = () => {
                         </div>
                         <div>
                             <CardTitle className="text-2xl">{warrior.name}</CardTitle>
-                            <p className="text-muted-foreground">{warrior.id}</p>
+                            {/* <p className="text-muted-foreground">{warrior.id}</p> */}
                         </div>
                         <div className="ml-auto">
                             <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${warrior.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -68,13 +111,7 @@ const WarriorDetail = () => {
                         </div>
 
                         <div className="space-y-4">
-                            <div className="flex items-start space-x-3">
-                                <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                                <div>
-                                    <p className="font-medium text-sm text-muted-foreground">Ngày nhập ngũ</p>
-                                    <p className="text-lg">{warrior.joinDate}</p>
-                                </div>
-                            </div>
+                            {/* Join date removed as per request */}
                         </div>
                     </div>
 

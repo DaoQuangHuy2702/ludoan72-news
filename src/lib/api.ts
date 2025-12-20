@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
     headers: {
         'Content-Type': 'application/json',
     },
@@ -10,11 +10,10 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
     (config) => {
-        // You can add auth tokens here if needed
-        // const token = localStorage.getItem('token');
-        // if (token) {
-        //   config.headers.Authorization = `Bearer ${token}`;
-        // }
+        const token = localStorage.getItem('admin_token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
     },
     (error) => {
@@ -28,10 +27,9 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        // Handle global errors here (e.g., 401 Unauthorized)
         if (error.response && error.response.status === 401) {
-            // Redirect to login or handle logout
-            console.error('Unauthorized access');
+            localStorage.removeItem('admin_token');
+            window.location.href = '/admin/login';
         }
         return Promise.reject(error);
     }
