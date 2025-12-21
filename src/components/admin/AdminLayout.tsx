@@ -1,7 +1,7 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Users, LogOut, LayoutDashboard, Menu } from "lucide-react";
+import { Users, LogOut, LayoutDashboard, Menu, ListTree, FileText } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
@@ -41,6 +41,24 @@ const AdminLayout = () => {
                     >
                         <Users className="mr-2 h-4 w-4" />
                         Chiến sĩ
+                    </Button>
+                </Link>
+                <Link to="/admin/categories">
+                    <Button
+                        variant={isActive("/admin/categories") ? "default" : "ghost"}
+                        className="w-full justify-start"
+                    >
+                        <ListTree className="mr-2 h-4 w-4" />
+                        Danh mục bài viết
+                    </Button>
+                </Link>
+                <Link to="/admin/articles">
+                    <Button
+                        variant={isActive("/admin/articles") ? "default" : "ghost"}
+                        className="w-full justify-start"
+                    >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Bài viết
                     </Button>
                 </Link>
             </nav>

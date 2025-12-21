@@ -7,6 +7,14 @@ const api = axios.create({
     },
 });
 
+export const MINIO_URL = 'http://localhost:9000';
+
+export const getMediaUrl = (path: string | null | undefined) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
+    return `${MINIO_URL}/${path}`;
+};
+
 // Request interceptor
 api.interceptors.request.use(
     (config) => {
@@ -27,6 +35,10 @@ api.interceptors.response.use(
         const { data } = response;
         // Check for business logic status code
         if (data && data.statusCode && data.statusCode !== 'SUCCESS2000') {
+            if (data.statusCode === 'EXCEPTION0505') {
+                localStorage.removeItem('admin_token');
+                window.location.href = '/admin/login';
+            }
             return Promise.reject({
                 response: {
                     data: {
@@ -38,7 +50,7 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response && error.response.status === 401) {
+        if (error.response && (error.response.status === 401 || error.response.status === 403)) {
             localStorage.removeItem('admin_token');
             window.location.href = '/admin/login';
         }

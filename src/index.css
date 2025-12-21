@@ -60,7 +60,12 @@
     font-family: 'Roboto', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Roboto', sans-serif;
     font-weight: 700;
   }
@@ -97,14 +102,31 @@
   }
 
   .filter-btn {
-    @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
+    @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 inline-flex items-center justify-center;
   }
 
   .filter-btn-active {
-    @apply bg-primary text-primary-foreground;
+    @apply bg-primary text-primary-foreground border border-primary;
   }
 
   .filter-btn-inactive {
     @apply bg-card text-foreground border border-border hover:border-primary hover:text-primary;
+  }
+
+  .filter-btn-dynamic {
+    color: var(--cat-color);
+    border: 1px solid color-mix(in srgb, var(--cat-color), transparent 70%);
+    background-color: transparent;
+  }
+
+  .filter-btn-dynamic:hover {
+    border-color: var(--cat-color);
+    background-color: color-mix(in srgb, var(--cat-color), transparent 95%);
+  }
+
+  .filter-btn-dynamic-active {
+    background-color: var(--cat-color) !important;
+    color: white !important;
+    border-color: var(--cat-color) !important;
   }
 }

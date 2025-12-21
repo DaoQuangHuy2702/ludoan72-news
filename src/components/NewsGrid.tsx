@@ -1,6 +1,12 @@
 import NewsCard from "./NewsCard";
 import { Button } from "./ui/button";
 
+interface Category {
+  id: string;
+  name: string;
+  colorCode: string;
+}
+
 interface Article {
   id: number;
   title: string;
@@ -13,9 +19,10 @@ interface Article {
 
 interface NewsGridProps {
   articles: Article[];
+  categories?: Category[];
 }
 
-const NewsGrid = ({ articles }: NewsGridProps) => {
+const NewsGrid = ({ articles, categories }: NewsGridProps) => {
   return (
     <section className="container mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
@@ -27,7 +34,7 @@ const NewsGrid = ({ articles }: NewsGridProps) => {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {articles.map((article) => (
-          <NewsCard key={article.id} article={article} />
+          <NewsCard key={article.id} article={article} categories={categories} />
         ))}
       </div>
 

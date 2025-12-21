@@ -1,7 +1,16 @@
+import { useState, useEffect, CSSProperties } from "react";
 import { Calendar, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import api, { getMediaUrl } from "@/lib/api";
+
+interface Category {
+  id: string;
+  name: string;
+  colorCode: string;
+}
 
 const activities = [
   {
@@ -55,18 +64,44 @@ const activities = [
   },
 ];
 
-const getCategoryColor = (category: string) => {
-  const colors: Record<string, string> = {
-    "Huấn luyện": "bg-primary/10 text-primary border-primary/20",
-    "Thi đua": "bg-red-500/10 text-red-600 border-red-500/20",
-    "Đền ơn đáp nghĩa": "bg-purple-500/10 text-purple-600 border-purple-500/20",
-    "Dân vận": "bg-green-500/10 text-green-600 border-green-500/20",
-    "Sự kiện": "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  };
-  return colors[category] || "bg-secondary text-foreground border-border";
-};
-
 const Activities = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/categories', { params: { size: 100 } });
+        if (response.data && response.data.success) {
+          setCategories(response.data.data.content);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const getCategoryColor = (categoryName: string): CSSProperties | string => {
+    const category = categories.find(c => c.name === categoryName);
+    if (category && category.colorCode) {
+      return {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        color: category.colorCode,
+        borderColor: `${category.colorCode}33`,
+        backdropFilter: 'blur(4px)',
+      };
+    }
+
+    const staticColors: Record<string, string> = {
+      "Huấn luyện": "bg-primary/10 text-primary border-primary/20",
+      "Thi đua": "bg-red-500/10 text-red-600 border-red-500/20",
+      "Đền ơn đáp nghĩa": "bg-purple-500/10 text-purple-600 border-purple-500/20",
+      "Dân vận": "bg-green-500/10 text-green-600 border-green-500/20",
+      "Sự kiện": "bg-blue-500/10 text-blue-600 border-blue-500/20",
+    };
+    return staticColors[categoryName] || "bg-secondary text-foreground border-border";
+  };
+
   const featuredActivity = activities.find((a) => a.featured);
   const otherActivities = activities.filter((a) => !a.featured);
 
@@ -82,7 +117,7 @@ const Activities = () => {
           </h1>
           <div className="w-20 h-1 bg-primary mx-auto rounded-full mb-6" />
           <p className="max-w-2xl mx-auto text-muted-foreground">
-            Cập nhật các hoạt động, sự kiện nổi bật của Lữ đoàn 72 - từ huấn luyện chiến đấu 
+            Cập nhật các hoạt động, sự kiện nổi bật của Lữ đoàn 72 - từ huấn luyện chiến đấu
             đến công tác dân vận và đền ơn đáp nghĩa
           </p>
         </div>
@@ -96,7 +131,7 @@ const Activities = () => {
               <div className="grid md:grid-cols-2">
                 <div className="relative h-64 md:h-auto">
                   <img
-                    src={featuredActivity.image}
+                    src={getMediaUrl(featuredActivity.image)}
                     alt={featuredActivity.title}
                     className="w-full h-full object-cover"
                   />
@@ -106,17 +141,22 @@ const Activities = () => {
                   </div>
                 </div>
                 <div className="p-6 md:p-8 flex flex-col justify-center">
-                  <span className={`inline-block w-fit px-3 py-1 rounded-full text-sm border mb-4 ${getCategoryColor(featuredActivity.category)}`}>
+                  <span
+                    className={`inline-block w-fit px-3 py-1 rounded-full text-sm border mb-4 ${typeof getCategoryColor(featuredActivity.category) === 'string' ? getCategoryColor(featuredActivity.category) : ""}`}
+                    style={typeof getCategoryColor(featuredActivity.category) === 'object' ? (getCategoryColor(featuredActivity.category) as CSSProperties) : {}}
+                  >
                     {featuredActivity.category}
                   </span>
                   <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-4">
                     {featuredActivity.title}
                   </h2>
                   <p className="text-muted-foreground mb-6">{featuredActivity.description}</p>
-                  <Button className="w-fit">
-                    Xem chi tiết
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Link to={`/activities/${featuredActivity.id}`}>
+                    <Button className="w-fit">
+                      Xem chi tiết
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -135,7 +175,7 @@ const Activities = () => {
               >
                 <div className="relative h-48 overflow-hidden">
                   <img
-                    src={activity.image}
+                    src={getMediaUrl(activity.image)}
                     alt={activity.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -145,19 +185,26 @@ const Activities = () => {
                   </div>
                 </div>
                 <div className="p-5">
-                  <span className={`inline-block px-2.5 py-1 rounded-full text-xs border mb-3 ${getCategoryColor(activity.category)}`}>
+                  <span
+                    className={`inline-block px-2.5 py-1 rounded-full text-xs border mb-3 ${typeof getCategoryColor(activity.category) === 'string' ? getCategoryColor(activity.category) : ""}`}
+                    style={typeof getCategoryColor(activity.category) === 'object' ? (getCategoryColor(activity.category) as CSSProperties) : {}}
+                  >
                     {activity.category}
                   </span>
-                  <h3 className="font-serif font-semibold text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                    {activity.title}
-                  </h3>
+                  <Link to={`/activities/${activity.id}`}>
+                    <h3 className="font-serif font-semibold text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                      {activity.title}
+                    </h3>
+                  </Link>
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                     {activity.description}
                   </p>
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary p-0 h-auto">
-                    Xem chi tiết
-                    <ArrowRight className="w-4 h-4 ml-1" />
-                  </Button>
+                  <Link to={`/activities/${activity.id}`}>
+                    <Button variant="ghost" size="sm" className="text-primary hover:text-primary p-0 h-auto">
+                      Xem chi tiết
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </Link>
                 </div>
               </article>
             ))}
