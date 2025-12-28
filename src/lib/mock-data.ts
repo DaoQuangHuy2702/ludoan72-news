@@ -8,6 +8,21 @@ export interface Warrior {
     gender?: string;
     address?: string;
     createdAt?: string;
+    phoneNumber?: string;
+    notes?: string;
+    strengths?: string;
+    aspirations?: string;
+    hometownProvinceCode?: string;
+    hometownCommuneCode?: string;
+    hometownAddress?: string;
+    currentProvinceCode?: string;
+    currentCommuneCode?: string;
+    currentAddress?: string;
+    hometownProvinceName?: string;
+    hometownCommuneName?: string;
+    currentProvinceName?: string;
+    currentCommuneName?: string;
+    avatar?: string;
 }
 
 export const mockWarrior: Warrior = {

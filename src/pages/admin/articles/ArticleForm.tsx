@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
+import ImageResize from 'quill-image-resize-module-react';
+
+Quill.register('modules/imageResize', ImageResize);
 import 'react-quill/dist/quill.snow.css';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,6 +64,11 @@ const ArticleForm = () => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Editor refs
+    const quillRef = useRef<ReactQuill>(null);
+    const editorImageInputRef = useRef<HTMLInputElement>(null);
+    const editorVideoInputRef = useRef<HTMLInputElement>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -178,6 +186,108 @@ const ArticleForm = () => {
         };
     }, [previewUrl]);
 
+    // Editor Media Handlers
+    const imageHandler = useCallback(() => {
+        editorImageInputRef.current?.click();
+    }, []);
+
+    const videoHandler = useCallback(() => {
+        editorVideoInputRef.current?.click();
+    }, []);
+
+    const handleEditorImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error("Ảnh quá lớn. Vui lòng chọn ảnh dưới 5MB.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const loadingToast = toast.loading("Đang upload ảnh...");
+            const response = await api.post("/cms/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            toast.dismiss(loadingToast);
+
+            if (response.data && response.data.success) {
+                const url = getMediaUrl(response.data.data);
+                const quill = quillRef.current?.getEditor();
+                const range = quill?.getSelection(true);
+
+                if (quill && range) {
+                    quill.insertEmbed(range.index, "image", url);
+                }
+            }
+        } catch (error) {
+            console.error("Editor image upload failed:", error);
+            toast.error("Upload ảnh thất bại");
+        } finally {
+            if (event.target) event.target.value = "";
+        }
+    };
+
+    const handleEditorVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 50 * 1024 * 1024) { // 50MB limit for video
+            toast.error("Video quá lớn. Vui lòng chọn video dưới 50MB.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const loadingToast = toast.loading("Đang upload video...");
+            const response = await api.post("/cms/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            toast.dismiss(loadingToast);
+
+            if (response.data && response.data.success) {
+                const url = getMediaUrl(response.data.data);
+                const quill = quillRef.current?.getEditor();
+                const range = quill?.getSelection(true);
+
+                if (quill && range) {
+                    quill.insertEmbed(range.index, "video", url);
+                }
+            }
+        } catch (error) {
+            console.error("Editor video upload failed:", error);
+            toast.error("Upload video thất bại");
+        } finally {
+            if (event.target) event.target.value = "";
+        }
+    };
+
+    const modules = useMemo(() => ({
+        toolbar: {
+            container: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'align': [] }],
+                ['link', 'image', 'video', 'clean']
+            ],
+            handlers: {
+                image: imageHandler,
+                video: videoHandler
+            }
+        },
+        imageResize: {
+            parchment: Quill.import('parchment'),
+            modules: ['Resize', 'DisplaySize']
+        }
+    }), [imageHandler, videoHandler]);
+
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setLoading(true);
         try {
@@ -242,6 +352,9 @@ const ArticleForm = () => {
                                                     <SelectContent>
                                                         <SelectItem value="NEWS">Tin tức</SelectItem>
                                                         <SelectItem value="ACTIVITY">Hoạt động</SelectItem>
+                                                        <SelectItem value="POLITICAL">Thông báo chính trị thời sự</SelectItem>
+                                                        <SelectItem value="LAW">Tìm hiểu về luật</SelectItem>
+                                                        <SelectItem value="DOCUMENT">Thông tư, văn bản, quy định</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                                 <FormMessage />
@@ -387,18 +500,27 @@ const ArticleForm = () => {
                                                  }
                                              `}</style>
                                             <ReactQuill
+                                                ref={quillRef}
                                                 theme="snow"
                                                 value={field.value}
                                                 onChange={field.onChange}
                                                 className="quill"
-                                                modules={{
-                                                    toolbar: [
-                                                        [{ 'header': [1, 2, 3, false] }],
-                                                        ['bold', 'italic', 'underline', 'strike'],
-                                                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                                                        ['link', 'clean']
-                                                    ],
-                                                }}
+                                                modules={modules}
+                                            />
+                                            {/* Hidden inputs for editor media upload */}
+                                            <input
+                                                type="file"
+                                                ref={editorImageInputRef}
+                                                className="hidden"
+                                                accept="image/*"
+                                                onChange={handleEditorImageUpload}
+                                            />
+                                            <input
+                                                type="file"
+                                                ref={editorVideoInputRef}
+                                                className="hidden"
+                                                accept="video/*"
+                                                onChange={handleEditorVideoUpload}
                                             />
                                         </div>
                                     </FormControl>

@@ -31,7 +31,7 @@ const AdminLayout = () => {
                         className="w-full justify-start"
                     >
                         <Users className="mr-2 h-4 w-4" />
-                        Chiến sĩ
+                        Quân nhân
                     </Button>
                 </Link>
                 <Link to="/admin/categories">

@@ -53,6 +53,13 @@ const NewsDetail = () => {
                             date: new Date(data.createdAt).toLocaleDateString('vi-VN'),
                             category: data.category?.name
                         });
+
+                        // Increment view count
+                        try {
+                            await api.put(`/public/articles/${id}/view`);
+                        } catch (err) {
+                            console.error("Failed to increment view:", err);
+                        }
                     }
                 }
             } catch (error) {

@@ -455,17 +455,14 @@ const SubmissionModalComponent = ({ open, onOpenChange, formData, setFormData, h
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="rank">Cấp bậc, Chức vụ <span className="text-red-500">*</span></Label>
-            <Select value={formData.rank} onValueChange={(val: any) => setFormData({ ...formData, rank: val })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Chọn cấp bậc, chức vụ" />
-              </SelectTrigger>
-              <SelectContent>
-                {["Binh nhì", "Binh nhất", "Hạ sĩ", "Trung sĩ", "Thượng sĩ", "Thiêu úy", "Trung úy", "Thượng úy", "Đại úy", "Thiếu tá", "Trung tá", "Thượng tá", "Đại tá", "LĐ, CH đơn vị", "Khác"].map(r => (
-                  <SelectItem key={r} value={r}>{r}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="rank">Cấp bậc, chức vụ <span className="text-red-500">*</span></Label>
+            <Input
+              id="rank"
+              value={formData.rank}
+              onChange={(e: any) => setFormData({ ...formData, rank: e.target.value })}
+              placeholder="Nhập cấp bậc, chức vụ"
+              required
+            />
           </div>
         </div>
         <div className="grid gap-2">

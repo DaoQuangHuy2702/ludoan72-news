@@ -5,6 +5,7 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    timeout: 300000, // 5 minutes
 });
 
 export const MINIO_URL = 'http://localhost:9000';

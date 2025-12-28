@@ -45,8 +45,6 @@ import { toast } from "sonner";
 const WarriorList = () => {
     const [warriors, setWarriors] = useState<Warrior[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [rankFilter, setRankFilter] = useState("all");
-    const [statusFilter, setStatusFilter] = useState("all");
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -60,8 +58,6 @@ const WarriorList = () => {
                 size: pageSize
             };
             if (searchTerm) params.name = searchTerm;
-            if (rankFilter !== "all") params.rank = rankFilter;
-            if (statusFilter !== "all") params.status = statusFilter;
 
             const response = await api.get('/cms/warriors', { params });
             if (response.data && response.data.success) {
@@ -70,11 +66,11 @@ const WarriorList = () => {
             }
         } catch (error) {
             console.error("Failed to fetch warriors:", error);
-            toast.error("Không thể tải danh sách chiến sĩ");
+            toast.error("Không thể tải danh sách quân nhân");
         } finally {
             setLoading(false);
         }
-    }, [searchTerm, rankFilter, statusFilter, page, pageSize]);
+    }, [searchTerm, page, pageSize]);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
@@ -86,8 +82,6 @@ const WarriorList = () => {
 
     const handleClearFilters = () => {
         setSearchTerm("");
-        setRankFilter("all");
-        setStatusFilter("all");
         setPage(0);
     };
 
@@ -95,7 +89,7 @@ const WarriorList = () => {
         try {
             await api.delete(`/cms/warriors/${id}`);
             setWarriors(warriors.filter((w) => w.id !== id));
-            toast.success("Xoá chiến sĩ thành công");
+            toast.success("Xoá quân nhân thành công");
         } catch (error) {
             console.error("Failed to delete warrior:", error);
             toast.error("Xoá thất bại");
@@ -125,59 +119,31 @@ const WarriorList = () => {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-3xl font-bold tracking-tight">Chiến sĩ</h2>
+                <h2 className="text-3xl font-bold tracking-tight">Quân nhân</h2>
                 <Link to="/admin/warriors/new">
                     <Button>
-                        <Plus className="mr-2 h-4 w-4" /> Thêm chiến sĩ
+                        <Plus className="mr-2 h-4 w-4" /> Thêm thông tin quân nhân
                     </Button>
                 </Link>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                <div className="relative w-full max-w-sm">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Tìm kiếm theo tên..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-8"
-                    />
+            <div className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-1 w-full max-w-sm">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Tìm kiếm theo tên..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-8"
+                        />
+                    </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                    <Select value={rankFilter} onValueChange={setRankFilter}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Cấp bậc" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tất cả cấp bậc</SelectItem>
-                            <SelectItem value="Binh nhì">Binh nhì</SelectItem>
-                            <SelectItem value="Binh nhất">Binh nhất</SelectItem>
-                            <SelectItem value="Hạ sĩ">Hạ sĩ</SelectItem>
-                            <SelectItem value="Trung sĩ">Trung sĩ</SelectItem>
-                            <SelectItem value="Thượng sĩ">Thượng sĩ</SelectItem>
-                            <SelectItem value="Thiếu úy">Thiếu úy</SelectItem>
-                            <SelectItem value="Trung úy">Trung úy</SelectItem>
-                            <SelectItem value="Thượng úy">Thượng úy</SelectItem>
-                            <SelectItem value="Đại úy">Đại úy</SelectItem>
-                        </SelectContent>
-                    </Select>
-
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Trạng thái" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                            <SelectItem value="active">Đang công tác</SelectItem>
-                            <SelectItem value="inactive">Đã nghỉ/Chuyển</SelectItem>
-                        </SelectContent>
-                    </Select>
-
-
-                    {(searchTerm || rankFilter !== "all" || statusFilter !== "all") && (
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+                    {searchTerm && (
                         <Button variant="ghost" onClick={handleClearFilters} className="text-muted-foreground">
-                            <XCircle className="mr-2 h-4 w-4" /> Xoá lọc
+                            <XCircle className="mr-2 h-4 w-4" /> Xoá tìm kiếm
                         </Button>
                     )}
                 </div>
@@ -191,9 +157,7 @@ const WarriorList = () => {
                             <TableHead>Ngày sinh</TableHead>
                             <TableHead>Giới tính</TableHead>
                             <TableHead>Cấp bậc</TableHead>
-                            <TableHead>Đơn vị</TableHead>
-                            <TableHead className="min-w-[200px]">Địa chỉ</TableHead>
-                            <TableHead>Trạng thái</TableHead>
+                            <TableHead>Nơi ở hiện tại</TableHead>
                             <TableHead className="text-right">Hành động</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -207,7 +171,7 @@ const WarriorList = () => {
                         ) : warriors.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={8} className="h-24 text-center">
-                                    Không tìm thấy chiến sĩ nào.
+                                    Không tìm thấy quân nhân nào.
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -217,19 +181,12 @@ const WarriorList = () => {
                                     <TableCell>{formatDate(warrior.birthDate)}</TableCell>
                                     <TableCell>{warrior.gender || "Nam"}</TableCell>
                                     <TableCell>{warrior.rank}</TableCell>
-                                    <TableCell>{warrior.unit}</TableCell>
-                                    <TableCell className="max-w-[250px] truncate" title={warrior.address}>
-                                        {warrior.address || "Chưa cập nhật"}
-                                    </TableCell>
                                     <TableCell>
-                                        <span
-                                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${warrior.status === "active"
-                                                ? "bg-green-100 text-green-800"
-                                                : "bg-red-100 text-red-800"
-                                                }`}
-                                        >
-                                            {warrior.status === "active" ? "Đang công tác" : "Đã nghỉ/Chuyển"}
-                                        </span>
+                                        {[
+                                            warrior.currentAddress,
+                                            warrior.currentCommuneName,
+                                            warrior.currentProvinceName
+                                        ].filter(Boolean).join(", ") || "Chưa cập nhật"}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end space-x-2">
@@ -254,7 +211,7 @@ const WarriorList = () => {
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>Xác nhận xoá?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                            Hành động này không thể hoàn tác. Chiến sĩ này sẽ bị xoá khỏi hệ thống.
+                                                            Hành động này không thể hoàn tác. Quân nhân này sẽ bị xoá khỏi hệ thống.
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>

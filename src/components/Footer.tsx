@@ -27,7 +27,7 @@ const Footer = () => {
             <ul className="space-y-2 text-sm text-card/70">
               <li><a href="/" className="hover:text-gold transition-colors">Trang chủ</a></li>
               <li><a href="/news" className="hover:text-gold transition-colors">Tin tức</a></li>
-              <li><a href="/activities" className="hover:text-gold transition-colors">Hoạt động</a></li>
+              <li><a href="/activities" className="hover:text-gold transition-colors">Kiến thức</a></li>
               <li><a href="/contact" className="hover:text-gold transition-colors">Liên hệ</a></li>
             </ul>
           </div>
