@@ -59,7 +59,7 @@ const QuillEditor = forwardRef<QuillEditorHandle, QuillEditorProps>(({ value, on
                         }
                     }
 
-                    setQuillInstance(Q);
+                    setQuillInstance(() => Q);
                     setEditor(() => RQ);
                 } catch (error) {
                     console.error("Failed to load Quill or ImageResize:", error);
