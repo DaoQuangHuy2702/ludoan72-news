@@ -29,14 +29,21 @@ const QuillEditor = forwardRef<QuillEditorHandle, QuillEditorProps>(({ value, on
             if (typeof window !== 'undefined') {
                 try {
                     // Import libraries dynamically only in the browser
-                    const [ReactQuillModule, QuillModule, ImageResizeModule] = await Promise.all([
+                    const [ReactQuillModule, QuillModule] = await Promise.all([
                         import('react-quill'),
-                        import('quill'),
-                        import('quill-image-resize-module-react')
+                        import('quill')
                     ]);
 
                     const RQ = ReactQuillModule.default || ReactQuillModule;
                     const Q = QuillModule.default || QuillModule;
+
+                    // Set Quill globally for plugins that expect it
+                    if (typeof window !== 'undefined') {
+                        (window as any).Quill = Q;
+                    }
+
+                    // Dynamically import ImageResize after Quill is ready
+                    const ImageResizeModule = await import('quill-image-resize-module-react');
                     const IR = ImageResizeModule.default || ImageResizeModule;
 
                     // Register module
@@ -45,7 +52,11 @@ const QuillEditor = forwardRef<QuillEditorHandle, QuillEditorProps>(({ value, on
                             Q.register('modules/imageResize', IR);
                         }
                     } catch (e) {
-                        Q.register('modules/imageResize', IR);
+                        try {
+                            Q.register('modules/imageResize', IR);
+                        } catch (err) {
+                            console.warn("Could not register imageResize, it might already be registered");
+                        }
                     }
 
                     setQuillInstance(Q);
