@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-// Quill registration is handled inside the component to avoid build-time issues with 'window'
+// Quill styles are still needed at the top level
 import 'react-quill/dist/quill.snow.css';
+
+import type { QuillEditorHandle } from "@/components/admin/QuillEditor";
+const QuillEditor = lazy(() => import("@/components/admin/QuillEditor"));
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -63,7 +66,7 @@ const ArticleForm = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Editor refs
-    const quillRef = useRef<ReactQuill>(null);
+    const quillRef = useRef<QuillEditorHandle>(null);
     const editorImageInputRef = useRef<HTMLInputElement>(null);
     const editorVideoInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,26 +81,6 @@ const ArticleForm = () => {
             thumbnail: "",
         },
     });
-
-    // Register Quill modules only on client side
-    useEffect(() => {
-        const registerQuill = async () => {
-            if (typeof window !== 'undefined') {
-                try {
-                    const { Quill } = await import('react-quill');
-                    const ImageResize = (await import('quill-image-resize-module-react')).default;
-
-                    // Register only if not already registered
-                    if (!Quill.imports['modules/imageResize']) {
-                        Quill.register('modules/imageResize', ImageResize);
-                    }
-                } catch (error) {
-                    console.error("Error registering Quill modules:", error);
-                }
-            }
-        };
-        registerQuill();
-    }, []);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -284,26 +267,6 @@ const ArticleForm = () => {
             if (event.target) event.target.value = "";
         }
     };
-
-    const modules = useMemo(() => ({
-        toolbar: {
-            container: [
-                [{ 'header': [1, 2, 3, false] }],
-                ['bold', 'italic', 'underline', 'strike'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'align': [] }],
-                ['link', 'image', 'video', 'clean']
-            ],
-            handlers: {
-                image: imageHandler,
-                video: videoHandler
-            }
-        },
-        imageResize: {
-            parchment: Quill.import('parchment'),
-            modules: ['Resize', 'DisplaySize']
-        }
-    }), [imageHandler, videoHandler]);
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setLoading(true);
@@ -516,22 +479,15 @@ const ArticleForm = () => {
                                                      height: 300px;
                                                  }
                                              `}</style>
-                                            <style>{`
-                                                 .quill > .ql-container {
-                                                     height: 300px;
-                                                  }
-                                              `}</style>
-                                            {/* Lazy loading ReactQuill to prevent SSR/Build issues */}
-                                            {typeof window !== 'undefined' && (
-                                                <ReactQuill
+                                            <Suspense fallback={<div className="h-[350px] w-full bg-muted animate-pulse rounded-md" />}>
+                                                <QuillEditor
                                                     ref={quillRef}
-                                                    theme="snow"
                                                     value={field.value}
                                                     onChange={field.onChange}
-                                                    className="quill"
-                                                    modules={modules}
+                                                    imageHandler={imageHandler}
+                                                    videoHandler={videoHandler}
                                                 />
-                                            )}
+                                            </Suspense>
                                             {/* Hidden inputs for editor media upload */}
                                             <input
                                                 type="file"
