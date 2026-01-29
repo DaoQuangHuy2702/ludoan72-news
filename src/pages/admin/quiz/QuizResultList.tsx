@@ -22,19 +22,35 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const QuizResultList = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [resultToDelete, setResultToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchResults = async () => {
         try {
-            const response = await api.get("/cms/quiz-results");
+            const response = await api.get("/cms/quiz-results", {
+                params: {
+                    page: currentPage - 1,
+                    size: 10
+                }
+            });
             if (response.data && response.data.data) {
                 setResults(response.data.data.content);
+                setTotalPages(response.data.data.totalPages);
             }
         } catch (error) {
             console.error("Failed to fetch results:", error);
@@ -46,7 +62,7 @@ const QuizResultList = () => {
 
     useEffect(() => {
         fetchResults();
-    }, []);
+    }, [currentPage]);
 
     const handleDelete = async (id: string) => {
         setResultToDelete(id);
@@ -128,6 +144,40 @@ const QuizResultList = () => {
                     </TableBody>
                 </Table>
             </div>
+
+            {totalPages > 1 && (
+                <div className="flex justify-center">
+                    <Pagination>
+                        <PaginationContent>
+                            <PaginationItem>
+                                <PaginationPrevious
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                />
+                            </PaginationItem>
+
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                <PaginationItem key={page}>
+                                    <PaginationLink
+                                        isActive={page === currentPage}
+                                        onClick={() => setCurrentPage(page)}
+                                        className="cursor-pointer"
+                                    >
+                                        {page}
+                                    </PaginationLink>
+                                </PaginationItem>
+                            ))}
+
+                            <PaginationItem>
+                                <PaginationNext
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                                />
+                            </PaginationItem>
+                        </PaginationContent>
+                    </Pagination>
+                </div>
+            )}
 
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogContent>
