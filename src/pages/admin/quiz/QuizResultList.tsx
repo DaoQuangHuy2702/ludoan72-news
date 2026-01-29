@@ -8,14 +8,27 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { format } from "date-fns";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const QuizResultList = () => {
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [resultToDelete, setResultToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchResults = async () => {
         try {
@@ -36,15 +49,24 @@ const QuizResultList = () => {
     }, []);
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Bạn có chắc chắn muốn xóa kết quả này?")) return;
+        setResultToDelete(id);
+        setDeleteDialogOpen(true);
+    };
 
+    const confirmDelete = async () => {
+        if (!resultToDelete) return;
+        setIsDeleting(true);
         try {
-            await api.delete(`/cms/quiz-results/${id}`);
-            toast.success("Xóa thành công!");
+            await api.delete(`/cms/quiz-results/${resultToDelete}`);
+            toast.success("Xóa kết quả thành công!");
             fetchResults();
         } catch (error) {
             console.error("Delete failed:", error);
-            toast.error("Xóa thất bại.");
+            toast.error("Có lỗi xảy ra khi xóa kết quả.");
+        } finally {
+            setIsDeleting(false);
+            setDeleteDialogOpen(false);
+            setResultToDelete(null);
         }
     };
 
@@ -106,6 +128,37 @@ const QuizResultList = () => {
                     </TableBody>
                 </Table>
             </div>
+
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Hành động này không thể hoàn tác. Kết quả của thí sinh sẽ bị xóa khỏi hệ thống.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => {
+                                e.preventDefault();
+                                confirmDelete();
+                            }}
+                            className="bg-red-500 hover:bg-red-600"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Đang xóa...
+                                </>
+                            ) : (
+                                "Xác nhận xóa"
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

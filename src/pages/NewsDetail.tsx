@@ -44,7 +44,7 @@ const NewsDetail = () => {
                     setArticle(mockArticle);
                 } else {
                     // Fetch from API for dynamic content
-                    const response = await api.get(`/cms/articles/${id}`);
+                    const response = await api.get(`/public/articles/${id}`);
                     if (response.data && response.data.data) {
                         const data = response.data.data;
                         setArticle({
