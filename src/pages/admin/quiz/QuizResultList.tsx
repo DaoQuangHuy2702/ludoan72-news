@@ -145,7 +145,7 @@ const QuizResultList = () => {
                 </Table>
             </div>
 
-            {totalPages > 1 && (
+            {totalPages > 0 && (
                 <div className="flex justify-center">
                     <Pagination>
                         <PaginationContent>
