@@ -21,6 +21,7 @@ import CategoryForm from "@/pages/admin/categories/CategoryForm";
 import ArticleList from "@/pages/admin/articles/ArticleList";
 import ArticleForm from "@/pages/admin/articles/ArticleForm";
 import NewsDetail from "./pages/NewsDetail";
+import ActivitiesList from "./pages/ActivitiesList";
 import QuizResultList from "@/pages/admin/quiz/QuizResultList";
 import QuizList from "@/pages/admin/quiz/QuizList";
 import QuizForm from "@/pages/admin/quiz/QuizForm";
@@ -37,7 +38,7 @@ const App = () => (
         <Route path="/news" element={<News />} />
         <Route path="/news/:id" element={<NewsDetail />} />
         <Route path="/activities" element={<Activities />} />
-        <Route path="/activities/:id" element={<NewsDetail />} />
+        <Route path="/activities/:type" element={<ActivitiesList />} />
         <Route path="/games" element={<Games />} />
         <Route path="/contact" element={<Contact />} />
         {/* Admin Routes */}
