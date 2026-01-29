@@ -12,10 +12,22 @@ import { PlusCircle, Edit, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Link } from "react-router-dom";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const QuizList = () => {
     const [quizzes, setQuizzes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [quizToDelete, setQuizToDelete] = useState<string | null>(null);
 
     const fetchQuizzes = async () => {
         try {
@@ -35,17 +47,25 @@ const QuizList = () => {
         fetchQuizzes();
     }, []);
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Bạn có chắc chắn muốn xóa bộ câu hỏi này?")) return;
+    const handleDelete = async () => {
+        if (!quizToDelete) return;
 
         try {
-            await api.delete(`/cms/quizzes/${id}`);
+            await api.delete(`/cms/quizzes/${quizToDelete}`);
             toast.success("Xóa thành công!");
             fetchQuizzes();
         } catch (error) {
             console.error("Delete failed:", error);
             toast.error("Xóa thất bại.");
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setQuizToDelete(null);
         }
+    };
+
+    const confirmDelete = (id: string) => {
+        setQuizToDelete(id);
+        setIsDeleteDialogOpen(true);
     };
 
     const handleSetActive = async (id: string) => {
@@ -158,7 +178,7 @@ const QuizList = () => {
                                                 size="icon"
                                                 disabled={quiz.isActive}
                                                 className="text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30"
-                                                onClick={() => handleDelete(quiz.id)}
+                                                onClick={() => confirmDelete(quiz.id)}
                                                 title={quiz.isActive ? "Không thể xóa bộ câu hỏi đang hoạt động" : "Xóa"}
                                             >
                                                 <Trash2 className="w-4 h-4" />
@@ -171,6 +191,26 @@ const QuizList = () => {
                     </TableBody>
                 </Table>
             </div>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Bạn có chắc chắn muốn xóa bộ câu hỏi này?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Hành động này không thể hoàn tác. Bộ câu hỏi sẽ bị xóa khỏi hệ thống.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+                        >
+                            Xóa
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
