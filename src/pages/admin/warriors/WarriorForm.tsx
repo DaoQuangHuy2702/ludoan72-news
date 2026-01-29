@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -71,6 +72,7 @@ const WarriorForm = () => {
     const [hometownCommunes, setHometownCommunes] = useState<any[]>([]);
     const [currentCommunes, setCurrentCommunes] = useState<any[]>([]);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -200,9 +202,9 @@ const WarriorForm = () => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error("File quá lớn. Vui lòng chọn file dưới 5MB.");
+        // Check file size (max 100MB)
+        if (file.size > 100 * 1024 * 1024) {
+            toast.error("File quá lớn. Vui lòng chọn file dưới 100MB.");
             return;
         }
 
@@ -216,34 +218,56 @@ const WarriorForm = () => {
         if (e.target) e.target.value = "";
     };
 
+    const uploadToCloudinary = async (file: File) => {
+        try {
+            // 1. Get signature from backend
+            const sigResponse = await api.get("/cms/upload/signature");
+            const { signature, timestamp, apiKey, cloudName } = sigResponse.data.data;
+
+            // 2. Upload directly to Cloudinary
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("api_key", apiKey);
+            formData.append("timestamp", timestamp.toString());
+            formData.append("signature", signature);
+
+            const resourceType = file.type.startsWith("video") ? "video" : "image";
+            const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
+
+            const response = await axios.post(uploadUrl, formData, {
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setUploadProgress(percentCompleted);
+                    }
+                },
+            });
+
+            return response.data.secure_url;
+        } catch (error) {
+            console.error("Direct upload to Cloudinary failed:", error);
+            throw error;
+        }
+    };
+
     const handleConfirmUpload = async () => {
         if (!selectedFile) return;
 
         setIsUploading(true);
+        setUploadProgress(0);
         try {
-            const formData = new FormData();
-            formData.append("file", selectedFile);
-
-            const response = await api.post("/cms/upload", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-
-            if (response.data && response.data.data) {
-                const imageUrl = response.data.data;
-                form.setValue("avatar", imageUrl);
-                setImagePreview(getMediaUrl(imageUrl));
-                toast.success("Upload ảnh thành công!");
-                setSelectedFile(null);
-            }
+            const secureUrl = await uploadToCloudinary(selectedFile);
+            form.setValue("avatar", secureUrl);
+            toast.success("Upload ảnh thành công");
+            setSelectedFile(null);
+            setImagePreview(getMediaUrl(secureUrl));
         } catch (error) {
             console.error("Upload failed:", error);
-            toast.error("Không thể upload ảnh");
-            setSelectedFile(null);
+            toast.error("Upload ảnh thất bại");
             setImagePreview(form.getValues("avatar") ? getMediaUrl(form.getValues("avatar")) : null);
         } finally {
             setIsUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -392,7 +416,7 @@ const WarriorForm = () => {
                             )}
 
                             <p className="text-[10px] text-muted-foreground text-center">
-                                Hỗ trợ: JPG, PNG, GIF (Tối đa 5MB)
+                                Hỗ trợ: JPG, PNG, GIF (Tối đa 100MB)
                             </p>
                         </div>
 
@@ -827,6 +851,28 @@ const WarriorForm = () => {
                     </form>
                 </Form>
             </div>
+
+            {isUploading && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-semibold">Đang tải ảnh lên...</h3>
+                            <span className="text-primary font-bold">{uploadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                            <div
+                                className="bg-primary h-full transition-all duration-300 ease-out"
+                                style={{ width: `${uploadProgress}%` }}
+                            ></div>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center italic">
+                            {uploadProgress < 100
+                                ? "Đang gửi dữ liệu đến máy chủ..."
+                                : "Máy chủ đang xử lý và lưu trữ dữ liệu..."}
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

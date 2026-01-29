@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from "react";
+import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 // Quill styles are still needed at the top level
 import 'react-quill/dist/quill.snow.css';
@@ -61,6 +62,7 @@ const ArticleForm = () => {
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,33 +145,59 @@ const ArticleForm = () => {
         if (event.target) event.target.value = "";
     };
 
+    const uploadToCloudinary = async (file: File) => {
+        try {
+            // 1. Get signature from backend
+            const sigResponse = await api.get("/cms/upload/signature");
+            const { signature, timestamp, apiKey, cloudName } = sigResponse.data.data;
+
+            // 2. Upload directly to Cloudinary
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("api_key", apiKey);
+            formData.append("timestamp", timestamp.toString());
+            formData.append("signature", signature);
+
+            const resourceType = file.type.startsWith("video") ? "video" : "image";
+            const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
+
+            const response = await axios.post(uploadUrl, formData, {
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total) {
+                        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                        setUploadProgress(percentCompleted);
+                    }
+                },
+            });
+
+            return response.data.secure_url;
+        } catch (error) {
+            console.error("Direct upload to Cloudinary failed:", error);
+            throw error;
+        }
+    };
+
     const handleConfirmUpload = async () => {
         if (!selectedFile) return;
 
         setUploading(true);
-        const formData = new FormData();
-        formData.append("file", selectedFile);
+        setUploadProgress(0);
 
         try {
-            const response = await api.post("/cms/upload", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            const secureUrl = await uploadToCloudinary(selectedFile);
+            form.setValue("thumbnail", secureUrl);
+            toast.success("Upload ảnh thành công");
 
-            if (response.data && response.data.success) {
-                form.setValue("thumbnail", response.data.data);
-                toast.success("Upload ảnh thành công");
-                // Clear local selection after successful upload
-                setSelectedFile(null);
-                if (previewUrl) URL.revokeObjectURL(previewUrl);
-                setPreviewUrl(null);
-            }
+            // Clear local selection after successful upload
+            setSelectedFile(null);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            setPreviewUrl(null);
         } catch (error) {
             console.error("Upload failed:", error);
             toast.error("Upload ảnh thất bại");
         } finally {
             setUploading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -199,8 +227,8 @@ const ArticleForm = () => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error("Ảnh quá lớn. Vui lòng chọn ảnh dưới 5MB.");
+        if (file.size > 100 * 1024 * 1024) {
+            toast.error("Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB.");
             return;
         }
 
@@ -209,25 +237,24 @@ const ArticleForm = () => {
 
         try {
             const loadingToast = toast.loading("Đang upload ảnh...");
-            const response = await api.post("/cms/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            setUploading(true);
+            setUploadProgress(0);
 
+            const secureUrl = await uploadToCloudinary(file);
             toast.dismiss(loadingToast);
 
-            if (response.data && response.data.success) {
-                const url = getMediaUrl(response.data.data);
-                const quill = quillRef.current?.getEditor();
-                const range = quill?.getSelection(true);
+            const quill = quillRef.current?.getEditor();
+            const range = quill?.getSelection(true);
 
-                if (quill && range) {
-                    quill.insertEmbed(range.index, "image", url);
-                }
+            if (quill && range) {
+                quill.insertEmbed(range.index, "image", secureUrl);
             }
         } catch (error) {
             console.error("Editor image upload failed:", error);
             toast.error("Upload ảnh thất bại");
         } finally {
+            setUploading(false);
+            setUploadProgress(0);
             if (event.target) event.target.value = "";
         }
     };
@@ -236,8 +263,8 @@ const ArticleForm = () => {
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (file.size > 50 * 1024 * 1024) { // 50MB limit for video
-            toast.error("Video quá lớn. Vui lòng chọn video dưới 50MB.");
+        if (file.size > 100 * 1024 * 1024) { // 100MB limit for video
+            toast.error("Video quá lớn. Vui lòng chọn video dưới 100MB.");
             return;
         }
 
@@ -246,24 +273,24 @@ const ArticleForm = () => {
 
         try {
             const loadingToast = toast.loading("Đang upload video...");
-            const response = await api.post("/cms/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
+            setUploading(true);
+            setUploadProgress(0);
+
+            const secureUrl = await uploadToCloudinary(file);
             toast.dismiss(loadingToast);
 
-            if (response.data && response.data.success) {
-                const url = getMediaUrl(response.data.data);
-                const quill = quillRef.current?.getEditor();
-                const range = quill?.getSelection(true);
+            const quill = quillRef.current?.getEditor();
+            const range = quill?.getSelection(true);
 
-                if (quill && range) {
-                    quill.insertEmbed(range.index, "video", url);
-                }
+            if (quill && range) {
+                quill.insertEmbed(range.index, "video", secureUrl);
             }
         } catch (error) {
             console.error("Editor video upload failed:", error);
             toast.error("Upload video thất bại");
         } finally {
+            setUploading(false);
+            setUploadProgress(0);
             if (event.target) event.target.value = "";
         }
     };
@@ -518,6 +545,28 @@ const ArticleForm = () => {
                     </form>
                 </Form>
             </div>
+
+            {uploading && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-semibold">Đang tải tệp lên...</h3>
+                            <span className="text-primary font-bold">{uploadProgress}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+                            <div
+                                className="bg-primary h-full transition-all duration-300 ease-out"
+                                style={{ width: `${uploadProgress}%` }}
+                            ></div>
+                        </div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center italic">
+                            {uploadProgress < 100
+                                ? "Đang gửi dữ liệu đến máy chủ..."
+                                : "Máy chủ đang xử lý và lưu trữ dữ liệu..."}
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
